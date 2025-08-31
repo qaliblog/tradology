@@ -1,0 +1,5 @@
+{
+  "name": "AI Trading Bot Analyst",
+  "description": "An AI-powered trading bot interface that provides technical analysis on financial charts using the Gemini API. Users can input a request for a specific chart, and the AI will generate an expert analysis.",
+  "requestFramePermissions": []
+}
