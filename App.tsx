@@ -5,17 +5,27 @@ import SearchBar from './components/SearchBar';
 import DataTable from './components/DataTable';
 import AnalysisDisplay from './components/AnalysisDisplay';
 import LineChart from './components/LineChart';
+import SettingsModal from './components/SettingsModal';
 import { getTradingAnalysis } from './services/geminiService';
+import { hasApiKey } from './services/apiKeyService';
 import type { AnalysisResult } from './types';
 
 const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const handleAnalysisRequest = useCallback(async (prompt: string) => {
     if (!prompt.trim()) {
       setError("Please enter a URL or query.");
+      return;
+    }
+
+    // Check if API key is available
+    if (!hasApiKey()) {
+      setError("No Gemini API key found. Please set your API key in the settings.");
+      setIsSettingsOpen(true);
       return;
     }
 
@@ -42,9 +52,17 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleSettingsClick = useCallback(() => {
+    setIsSettingsOpen(true);
+  }, []);
+
+  const handleCloseSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
-      <Header />
+      <Header onSettingsClick={handleSettingsClick} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-gray-400 mb-6">
@@ -88,6 +106,11 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={handleCloseSettings} 
+      />
     </div>
   );
 };

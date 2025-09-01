@@ -14,10 +14,21 @@ const DataTable: React.FC<DataTableProps> = ({ data, prompt }) => {
         <h2 className="text-xl font-semibold text-gray-200 mb-2">
           Data for: <span className="text-blue-400">{prompt}</span>
         </h2>
-        <p className="text-gray-400">
-          The AI could not find structured historical data for this query.
-          Please see the analysis below for insights from web search results.
-        </p>
+        <div className="text-gray-400 space-y-2">
+          <p>
+            The AI could not find structured historical data for this query.
+          </p>
+          <p className="text-sm">
+            This is common for some assets or when real-time data sources are not accessible.
+            Please see the comprehensive analysis below for valuable insights from web search results.
+          </p>
+          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-md">
+            <p className="text-blue-300 text-sm">
+              💡 <strong>Tip:</strong> The analysis below contains current market information, 
+              technical insights, and trend analysis even without structured price data.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
