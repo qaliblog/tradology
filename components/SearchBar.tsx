@@ -28,8 +28,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder={
-            // FIX: Placeholder text is now static.
-            "Enter a URL or query, e.g., Analyze BTC/USD..." 
+            "Ask: 'Should I buy BTC?', 'Is ETH oversold?', 'TradingView URL', or paste HTML..."
           }
           disabled={isDisabled}
           className="w-full pl-12 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"

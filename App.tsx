@@ -4,6 +4,7 @@ import Header from './components/Header';
 import SearchBar from './components/SearchBar';
 import DataTable from './components/DataTable';
 import AnalysisDisplay from './components/AnalysisDisplay';
+import EnhancedAnalysisDisplay from './components/EnhancedAnalysisDisplay';
 import AdvancedChart from './components/AdvancedChart';
 import SimpleChart from './components/SimpleChart';
 import TradingViewChart from './components/TradingViewChart';
@@ -384,8 +385,15 @@ const App: React.FC = () => {
                 prompt={analysisResult.prompt} 
               />
               
-              {/* Analysis Display */}
-              {analysisResult.analysis ? (
+              {/* Enhanced Analysis Display */}
+              {analysisResult.chartData && analysisResult.chartData.length > 0 ? (
+                <EnhancedAnalysisDisplay 
+                  data={analysisResult.chartData}
+                  symbol={analysisResult.prompt}
+                  userPrompt={analysisResult.prompt}
+                  sources={analysisResult.sources} 
+                />
+              ) : analysisResult.analysis ? (
                 <AnalysisDisplay 
                   analysis={analysisResult.analysis} 
                   sources={analysisResult.sources} 
