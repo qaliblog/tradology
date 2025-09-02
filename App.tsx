@@ -17,6 +17,7 @@ import SettingsModal from './components/SettingsModal';
 import MultiApiSettings from './components/MultiApiSettings';
 import SessionHistory from './components/SessionHistory';
 import ErrorBoundary from './components/ErrorBoundary';
+import LeveragedScenarios from './components/LeveragedScenarios';
 import { getTradingAnalysis } from './services/geminiService';
 import { hasApiKey } from './services/apiKeyService';
 import { saveSessionToHistory, type SessionHistoryItem } from './services/sessionHistoryService';
@@ -88,6 +89,8 @@ const App: React.FC = () => {
   const [useTradingViewChart, setUseTradingViewChart] = useState<boolean>(true);
   const [dbInitialized, setDbInitialized] = useState<boolean>(false);
   const [showTradingViewTest, setShowTradingViewTest] = useState<boolean>(false);
+  const [showLeveragedScenarios, setShowLeveragedScenarios] = useState<boolean>(false);
+  const [accountBalance, setAccountBalance] = useState<number>(10000);
 
   // Initialize app
   useEffect(() => {
@@ -321,21 +324,63 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* TradingView Test Button */}
-          <div className="mb-6 text-center">
+          {/* Control Buttons */}
+          <div className="mb-6 flex flex-wrap justify-center gap-4">
             <button
               onClick={() => setShowTradingViewTest(!showTradingViewTest)}
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
             >
               {showTradingViewTest ? 'Hide' : 'Show'} TradingView Data Extractor
             </button>
+            
+            {analysisResult && analysisResult.chartData && analysisResult.chartData.length > 0 && (
+              <button
+                onClick={() => setShowLeveragedScenarios(!showLeveragedScenarios)}
+                className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+              >
+                {showLeveragedScenarios ? 'Hide' : 'Show'} Leveraged Trading Scenarios
+              </button>
+            )}
           </div>
+
+          {/* Account Balance Input */}
+          {showLeveragedScenarios && (
+            <div className="mb-6 text-center">
+              <label className="block text-gray-300 mb-2">Account Balance for Risk Calculations:</label>
+              <div className="flex justify-center items-center gap-4">
+                <input
+                  type="number"
+                  value={accountBalance}
+                  onChange={(e) => setAccountBalance(Number(e.target.value))}
+                  className="bg-gray-700 text-white px-4 py-2 rounded border border-gray-600 w-48"
+                  placeholder="Enter account balance"
+                  min="100"
+                  step="100"
+                />
+                <span className="text-gray-400">USD</span>
+              </div>
+            </div>
+          )}
 
           {/* TradingView Test Component */}
           {showTradingViewTest && (
             <div className="mb-8">
               <ErrorBoundary>
                 <TradingViewTest onDataExtracted={handleTradingViewDataExtracted} />
+              </ErrorBoundary>
+            </div>
+          )}
+
+          {/* Leveraged Scenarios Component */}
+          {showLeveragedScenarios && analysisResult && analysisResult.chartData && analysisResult.chartData.length > 0 && (
+            <div className="mb-8">
+              <ErrorBoundary>
+                <LeveragedScenarios
+                  symbol={analysisResult.prompt}
+                  currentPrice={analysisResult.chartData[analysisResult.chartData.length - 1]?.close || 0}
+                  chartData={analysisResult.chartData}
+                  accountBalance={accountBalance}
+                />
               </ErrorBoundary>
             </div>
           )}

@@ -295,6 +295,41 @@ const EnhancedAnalysisDisplay: React.FC<EnhancedAnalysisDisplayProps> = ({
                   </div>
                 </div>
                 
+                {/* Leveraged Trading Information */}
+                {scenario.leverage && (
+                  <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-lg p-4 mb-4 border border-orange-500/30">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-orange-400 text-xs mb-1">Leverage</div>
+                        <div className="text-orange-400 font-bold text-lg">{scenario.leverage}x</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-red-400 text-xs mb-1">Liquidation</div>
+                        <div className="text-red-400 font-semibold">${scenario.liquidationPrice?.toFixed(8)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-blue-400 text-xs mb-1">Success Rate</div>
+                        <div className="text-blue-400 font-semibold">{scenario.successRate}%</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-purple-400 text-xs mb-1">Position Size</div>
+                        <div className="text-purple-400 font-semibold">{scenario.positionSize}%</div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mt-3">
+                      <div className="text-center">
+                        <div className="text-red-400 text-xs mb-1">Max Loss</div>
+                        <div className="text-red-400 font-semibold">${scenario.maxLoss}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-green-400 text-xs mb-1">Max Gain</div>
+                        <div className="text-green-400 font-semibold">${scenario.maxGain}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-white/60 text-sm">Risk-Reward Ratio</div>
                   <div className={`font-bold ${

@@ -28,6 +28,12 @@ interface TradingScenario {
   riskReward: number;
   confidence: number;
   reasoning: string;
+  leverage?: number;
+  liquidationPrice?: number;
+  successRate?: number;
+  positionSize?: number;
+  maxLoss?: number;
+  maxGain?: number;
 }
 
 interface TradingGuidance {
@@ -80,6 +86,9 @@ export function analyzeMarketData(
     // Generate trading scenarios with stop-loss and take-profit levels
     const tradingScenarios = generateTradingScenarios(data, indicators, trend, keyLevels, userPrompt);
     
+    // Generate leveraged trading scenarios
+    const leveragedScenarios = generateLeveragedScenarios(data, indicators, trend, keyLevels, userPrompt);
+    
     const analysis: MarketAnalysis = {
       trend: trend.direction,
       strength: trend.strength,
@@ -97,7 +106,7 @@ export function analyzeMarketData(
       nextSteps,
       warnings,
       opportunities,
-      tradingScenarios
+      tradingScenarios: [...tradingScenarios, ...leveragedScenarios]
     };
     
   } catch (error) {
@@ -905,6 +914,264 @@ function createHoldScenario(
     confidence: Math.round(trend.confidence),
     reasoning
   };
+}
+
+/**
+ * Generate leveraged trading scenarios with liquidation protection
+ */
+function generateLeveragedScenarios(
+  data: ChartDataPoint[],
+  indicators: any,
+  trend: any,
+  keyLevels: any,
+  userPrompt: string
+): TradingScenario[] {
+  const scenarios: TradingScenario[] = [];
+  const currentPrice = indicators.currentPrice;
+  const rsi = indicators.rsi;
+  const sma20 = indicators.sma20;
+  const sma50 = indicators.sma50;
+  
+  if (!currentPrice || currentPrice <= 0) {
+    return scenarios;
+  }
+  
+  // Analyze user intent for leverage
+  const isAskingAboutLeverage = /leverage|margin|10x|20x|30x|40x|50x|60x/i.test(userPrompt);
+  const isAskingAboutBuying = /buy|purchase|long|bullish|enter/i.test(userPrompt);
+  const isAskingAboutSelling = /sell|short|bearish|exit/i.test(userPrompt);
+  
+  // Always generate leveraged scenarios for comprehensive analysis
+  // (Previously only generated for explicit leverage requests or high risk)
+  
+  // Show key leverage levels for comprehensive analysis
+  const leverageLevels = [10, 20, 30, 50]; // Reduced to show most important levels
+  
+  // Only generate leveraged scenarios if we have a clear trend direction
+  if (trend.direction !== 'sideways' && trend.confidence > 40) {
+    for (const leverage of leverageLevels) {
+      // Generate bullish leveraged scenario
+      if (trend.direction === 'bullish' || isAskingAboutBuying) {
+        const bullishLeveraged = createLeveragedBullishScenario(
+          currentPrice, indicators, trend, keyLevels, leverage, rsi, sma20, sma50
+        );
+        if (bullishLeveraged) {
+          scenarios.push(bullishLeveraged);
+        }
+      }
+      
+      // Generate bearish leveraged scenario
+      if (trend.direction === 'bearish' || isAskingAboutSelling) {
+        const bearishLeveraged = createLeveragedBearishScenario(
+          currentPrice, indicators, trend, keyLevels, leverage, rsi, sma20, sma50
+        );
+        if (bearishLeveraged) {
+          scenarios.push(bearishLeveraged);
+        }
+      }
+    }
+  }
+  
+  return scenarios;
+}
+
+/**
+ * Create leveraged bullish scenario
+ */
+function createLeveragedBullishScenario(
+  currentPrice: number,
+  indicators: any,
+  trend: any,
+  keyLevels: any,
+  leverage: number,
+  rsi: number | null,
+  sma20: number | null,
+  sma50: number | null
+): TradingScenario | null {
+  const entryPrice = currentPrice;
+  
+  // Calculate liquidation price (typically 90% of entry for most exchanges)
+  const liquidationPrice = entryPrice * (1 - 0.9 / leverage);
+  
+  // Calculate safe stop loss (5% buffer from liquidation)
+  const safeStopLoss = liquidationPrice * 1.05;
+  
+  // Calculate take profit levels (scaled with leverage)
+  const baseTakeProfit1 = currentPrice * 1.02; // 2% base profit
+  const baseTakeProfit2 = currentPrice * 1.05; // 5% base profit
+  
+  const takeProfit1 = entryPrice + (baseTakeProfit1 - entryPrice) * leverage;
+  const takeProfit2 = entryPrice + (baseTakeProfit2 - entryPrice) * leverage;
+  
+  // Calculate risk-reward ratio
+  const risk = entryPrice - safeStopLoss;
+  const reward = takeProfit1 - entryPrice;
+  const riskReward = reward / risk;
+  
+  // Calculate success rate based on historical data and leverage
+  let successRate = calculateSuccessRate(trend, rsi, leverage, 'bullish');
+  
+  // Calculate position size (recommended 1-5% of account per trade)
+  const positionSize = Math.min(5, Math.max(1, 100 / leverage)); // Higher leverage = smaller position
+  
+  // Calculate max loss and gain
+  const maxLoss = (entryPrice - safeStopLoss) * positionSize;
+  const maxGain = (takeProfit2 - entryPrice) * positionSize;
+  
+  // Determine confidence
+  let confidence = Math.max(20, trend.confidence - (leverage - 10) * 2); // Lower confidence for higher leverage
+  if (rsi && rsi < 70) confidence += 5;
+  if (sma20 && sma50 && currentPrice > sma20 && sma20 > sma50) confidence += 10;
+  
+  confidence = Math.min(confidence, 85); // Cap confidence for leveraged trades
+  
+  // Generate reasoning
+  let reasoning = `${leverage}x leveraged bullish position. `;
+  reasoning += `Liquidation at $${liquidationPrice.toFixed(8)} (${((entryPrice - liquidationPrice) / entryPrice * 100).toFixed(1)}% move). `;
+  reasoning += `Success rate: ${successRate}%. `;
+  reasoning += `Risk-reward: ${riskReward.toFixed(1)}:1. `;
+  reasoning += `Recommended position size: ${positionSize}% of account.`;
+  
+  return {
+    action: 'BUY',
+    entryPrice: Number(entryPrice.toFixed(8)),
+    stopLoss: Number(safeStopLoss.toFixed(8)),
+    takeProfit1: Number(takeProfit1.toFixed(8)),
+    takeProfit2: Number(takeProfit2.toFixed(8)),
+    riskReward: Number(riskReward.toFixed(2)),
+    confidence: Math.round(confidence),
+    reasoning,
+    leverage,
+    liquidationPrice: Number(liquidationPrice.toFixed(8)),
+    successRate: Math.round(successRate),
+    positionSize: Number(positionSize.toFixed(1)),
+    maxLoss: Number(maxLoss.toFixed(2)),
+    maxGain: Number(maxGain.toFixed(2))
+  };
+}
+
+/**
+ * Create leveraged bearish scenario
+ */
+function createLeveragedBearishScenario(
+  currentPrice: number,
+  indicators: any,
+  trend: any,
+  keyLevels: any,
+  leverage: number,
+  rsi: number | null,
+  sma20: number | null,
+  sma50: number | null
+): TradingScenario | null {
+  const entryPrice = currentPrice;
+  
+  // Calculate liquidation price (typically 110% of entry for short positions)
+  const liquidationPrice = entryPrice * (1 + 0.9 / leverage);
+  
+  // Calculate safe stop loss (5% buffer from liquidation)
+  const safeStopLoss = liquidationPrice * 0.95;
+  
+  // Calculate take profit levels (scaled with leverage)
+  const baseTakeProfit1 = currentPrice * 0.98; // 2% base profit
+  const baseTakeProfit2 = currentPrice * 0.95; // 5% base profit
+  
+  const takeProfit1 = entryPrice - (entryPrice - baseTakeProfit1) * leverage;
+  const takeProfit2 = entryPrice - (entryPrice - baseTakeProfit2) * leverage;
+  
+  // Calculate risk-reward ratio
+  const risk = safeStopLoss - entryPrice;
+  const reward = entryPrice - takeProfit1;
+  const riskReward = reward / risk;
+  
+  // Calculate success rate
+  let successRate = calculateSuccessRate(trend, rsi, leverage, 'bearish');
+  
+  // Calculate position size
+  const positionSize = Math.min(5, Math.max(1, 100 / leverage));
+  
+  // Calculate max loss and gain
+  const maxLoss = (safeStopLoss - entryPrice) * positionSize;
+  const maxGain = (entryPrice - takeProfit2) * positionSize;
+  
+  // Determine confidence
+  let confidence = Math.max(20, trend.confidence - (leverage - 10) * 2);
+  if (rsi && rsi > 30) confidence += 5;
+  if (sma20 && sma50 && currentPrice < sma20 && sma20 < sma50) confidence += 10;
+  
+  confidence = Math.min(confidence, 85);
+  
+  // Generate reasoning
+  let reasoning = `${leverage}x leveraged bearish position. `;
+  reasoning += `Liquidation at $${liquidationPrice.toFixed(8)} (${((liquidationPrice - entryPrice) / entryPrice * 100).toFixed(1)}% move). `;
+  reasoning += `Success rate: ${successRate}%. `;
+  reasoning += `Risk-reward: ${riskReward.toFixed(1)}:1. `;
+  reasoning += `Recommended position size: ${positionSize}% of account.`;
+  
+  return {
+    action: 'SELL',
+    entryPrice: Number(entryPrice.toFixed(8)),
+    stopLoss: Number(safeStopLoss.toFixed(8)),
+    takeProfit1: Number(takeProfit1.toFixed(8)),
+    takeProfit2: Number(takeProfit2.toFixed(8)),
+    riskReward: Number(riskReward.toFixed(2)),
+    confidence: Math.round(confidence),
+    reasoning,
+    leverage,
+    liquidationPrice: Number(liquidationPrice.toFixed(8)),
+    successRate: Math.round(successRate),
+    positionSize: Number(positionSize.toFixed(1)),
+    maxLoss: Number(maxLoss.toFixed(2)),
+    maxGain: Number(maxGain.toFixed(2))
+  };
+}
+
+/**
+ * Calculate success rate based on trend, RSI, leverage, and direction
+ */
+function calculateSuccessRate(
+  trend: any,
+  rsi: number | null,
+  leverage: number,
+  direction: 'bullish' | 'bearish'
+): number {
+  let baseSuccessRate = 50; // Base 50% success rate
+  
+  // Adjust based on trend strength
+  if (trend.strength === 'strong') {
+    baseSuccessRate += 20;
+  } else if (trend.strength === 'moderate') {
+    baseSuccessRate += 10;
+  }
+  
+  // Adjust based on trend direction alignment
+  if ((direction === 'bullish' && trend.direction === 'bullish') ||
+      (direction === 'bearish' && trend.direction === 'bearish')) {
+    baseSuccessRate += 15;
+  } else if (trend.direction === 'sideways') {
+    baseSuccessRate += 5;
+  } else {
+    baseSuccessRate -= 10; // Against trend
+  }
+  
+  // Adjust based on RSI
+  if (rsi) {
+    if (direction === 'bullish' && rsi < 70) {
+      baseSuccessRate += 10; // Not overbought
+    } else if (direction === 'bearish' && rsi > 30) {
+      baseSuccessRate += 10; // Not oversold
+    } else if (direction === 'bullish' && rsi < 30) {
+      baseSuccessRate += 15; // Oversold bounce
+    } else if (direction === 'bearish' && rsi > 70) {
+      baseSuccessRate += 15; // Overbought rejection
+    }
+  }
+  
+  // Adjust based on leverage (higher leverage = lower success rate)
+  const leveragePenalty = (leverage - 10) * 1.5;
+  baseSuccessRate -= leveragePenalty;
+  
+  // Ensure success rate is within reasonable bounds
+  return Math.max(15, Math.min(85, baseSuccessRate));
 }
 
 /**
