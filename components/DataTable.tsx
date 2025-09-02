@@ -54,10 +54,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, prompt }) => {
             {data.map((row, index) => (
               <tr key={index} className="border-b border-gray-700 hover:bg-gray-700/40 transition-colors duration-200">
                 <td className="px-4 py-3 font-medium text-gray-200 whitespace-nowrap">{row.date}</td>
-                <td className="px-4 py-3 text-right">{row.open.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td className="px-4 py-3 text-right text-green-400">{row.high.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td className="px-4 py-3 text-right text-red-400">{row.low.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td className="px-4 py-3 text-right font-semibold">{row.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="px-4 py-3 text-right">{typeof row.open === 'number' ? row.open.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A'}</td>
+                <td className="px-4 py-3 text-right text-green-400">{typeof row.high === 'number' ? row.high.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A'}</td>
+                <td className="px-4 py-3 text-right text-red-400">{typeof row.low === 'number' ? row.low.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A'}</td>
+                <td className="px-4 py-3 text-right font-semibold">{typeof row.close === 'number' ? row.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A'}</td>
                 <td className="px-4 py-3 text-right">{row.volume}</td>
               </tr>
             ))}

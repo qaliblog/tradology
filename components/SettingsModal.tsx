@@ -4,9 +4,10 @@ import { getApiKey, setApiKey, clearApiKey } from '../services/apiKeyService';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenMultiApi?: () => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onOpenMultiApi }) => {
   const [apiKey, setApiKeyValue] = useState<string>('');
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
@@ -109,6 +110,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               {validationMessage}
             </div>
           )}
+
+          <div className="mb-4">
+            <button
+              onClick={onOpenMultiApi}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            >
+              Multi-API Settings
+            </button>
+            <p className="text-xs text-gray-400 mt-1 text-center">
+              Configure multiple API keys for automatic cycling and rate limit handling
+            </p>
+          </div>
 
           <div className="flex space-x-3">
             <button

@@ -113,7 +113,7 @@ const LineChart: React.FC<{ data: ChartDataPoint[] }> = ({ data }) => {
       },
       y: {
         grid: { color: 'rgba(107, 114, 128, 0.2)' },
-        ticks: { color: '#9CA3AF', callback: (value) => `$${Number(value).toLocaleString()}` },
+        ticks: { color: '#9CA3AF', callback: (value) => `$${typeof value === 'number' ? value.toLocaleString() : '0'}` },
       },
     },
     interaction: {

@@ -8,12 +8,31 @@ interface AnalysisDisplayProps {
 
 // A simple utility to convert markdown-like text to HTML
 const formatAnalysis = (text: string) => {
-    return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-300">$1</strong>') // Bold
-        .replace(/\n/g, '<br />'); // Newlines
+    if (!text || typeof text !== 'string') {
+        return 'No analysis content available.';
+    }
+    
+    try {
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-300">$1</strong>') // Bold
+            .replace(/\n/g, '<br />'); // Newlines
+    } catch (error) {
+        console.error('Error formatting analysis text:', error);
+        return 'Error formatting analysis content.';
+    }
 };
 
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis, sources }) => {
+  // Add error boundary and validation
+  if (!analysis) {
+    return (
+      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 shadow-lg">
+        <h2 className="text-2xl font-bold text-gray-100 mb-4">AI Technical Analysis</h2>
+        <p className="text-gray-400">No analysis data available.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 shadow-lg">
       <h2 className="text-2xl font-bold text-gray-100 mb-4">AI Technical Analysis</h2>
@@ -36,7 +55,13 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis, sources }) 
                             className="text-blue-400 hover:text-blue-300 hover:underline truncate"
                             title={source.title}
                         >
-                            {source.title || new URL(source.uri).hostname}
+                            {source.title || (() => {
+                                try {
+                                    return new URL(source.uri).hostname;
+                                } catch {
+                                    return source.uri;
+                                }
+                            })()}
                         </a>
                     </li>
                 ))}
