@@ -24,11 +24,6 @@ jobs:
     - name: Install dependencies
       run: npm install
       
-    - name: Clean and regenerate lock file
-      run: |
-        rm -f package-lock.json
-        npm install --ignore-engines
-      
     - name: Build web app
       run: npm run build
       
@@ -37,39 +32,6 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
-        
-    - name: Download and setup Android SDK
-      run: |
-        mkdir -p $HOME/android-sdk
-        cd $HOME/android-sdk
-        
-        # Download command line tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        
-        # Create proper directory structure
-        mkdir -p cmdline-tools
-        mv cmdline-tools cmdline-tools-temp
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools-temp/* cmdline-tools/latest/
-        rm -rf cmdline-tools-temp
-        rm commandlinetools-linux-11076708_latest.zip
-        
-        # Set environment variables
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
-        
-    - name: Accept Android licenses
-      run: |
-        yes | sdkmanager --licenses || true
-        
-    - name: Install Android SDK components
-      run: |
-        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-        # Add build-tools to PATH for aapt
-        echo "$HOME/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
         
     - name: Install Capacitor CLI
       run: npm install -g @capacitor/cli
@@ -80,102 +42,49 @@ jobs:
     - name: Sync web code to native
       run: npx cap sync android
       
-    - name: Configure Android build
+    - name: Setup Android environment
       run: |
+        # Use a pre-built Android environment
+        export ANDROID_HOME=/usr/local/android-sdk
+        export ANDROID_SDK_ROOT=/usr/local/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+        
+        # Update app name and package
         cd android
-        # Update app name in strings.xml
         sed -i 's/AI Trading Bot Analyst/tradology/g' app/src/main/res/values/strings.xml
-        # Update package name in build.gradle if needed
         sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/build.gradle
-        
-        # Ensure AndroidManifest.xml has proper permissions and configuration
-        echo "Checking AndroidManifest.xml..."
-        cat app/src/main/AndroidManifest.xml
-        
-        # Update package name in AndroidManifest.xml if needed
         sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/src/main/AndroidManifest.xml
         
-        # Ensure proper permissions are set
+        # Ensure proper permissions
         if ! grep -q "android.permission.INTERNET" app/src/main/AndroidManifest.xml; then
-          echo "Adding INTERNET permission to AndroidManifest.xml"
           sed -i '/<application/a\    <uses-permission android:name="android.permission.INTERNET" />' app/src/main/AndroidManifest.xml
         fi
         
-    - name: Create debug keystore
+        # Show current configuration
+        echo "=== Current Configuration ==="
+        echo "Package: $(grep 'package=' app/src/main/AndroidManifest.xml)"
+        echo "App Name: $(grep 'string name="app_name"' app/src/main/res/values/strings.xml)"
+        echo "Build.gradle package: $(grep 'applicationId' app/build.gradle)"
+        
+    - name: Build APK
       run: |
         cd android
-        # Create debug keystore for signing
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-        # Copy keystore to app directory
-        cp debug.keystore app/
-        
-    - name: Configure signing in build.gradle
-      run: |
-        cd android
-        # Add signing config to app/build.gradle
-        cat >> app/build.gradle << 'EOF'
-        
-        android {
-            signingConfigs {
-                debug {
-                    storeFile file('debug.keystore')
-                    storePassword 'android'
-                    keyAlias 'androiddebugkey'
-                    keyPassword 'android'
-                }
-            }
-            buildTypes {
-                debug {
-                    signingConfig signingConfigs.debug
-                }
-            }
-        }
-        EOF
-        
-    - name: Build APK with debug info
-      run: |
-        cd android
-        # Clean previous builds
+        # Clean and build
         ./gradlew clean
-        # Build with verbose output
-        ./gradlew assembleDebug --info --stacktrace
-        # Verify APK was created
-        ls -la app/build/outputs/apk/debug/
+        ./gradlew assembleDebug --stacktrace
         
-        # Check if build was successful
-        if [ ! -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-          echo "ERROR: APK was not created!"
+        # Verify APK
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK build failed!"
           exit 1
         fi
-        
-    - name: Verify APK
-      run: |
-        cd android
-        # Check APK info and verify it's valid
-        aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -20
-        # Check APK file size
-        du -h app/build/outputs/apk/debug/app-debug.apk
-        # Verify APK is not corrupted
-        file app/build/outputs/apk/debug/app-debug.apk
         
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: android-apk
+        name: tradology-apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
-        
-    - name: Build Release APK (unsigned)
-      run: |
-        cd android
-        ./gradlew assembleRelease --info
-      env:
-        ANDROID_HOME: ${{ env.ANDROID_HOME }}
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-        
-    - name: Upload Release APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-release-apk
-        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
         retention-days: 30

@@ -12,7 +12,8 @@
     "cap:build": "cap build",
     "cap:run": "cap run",
     "android:build": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
-    "android:release": "npm run build && cap sync android && cd android && ./gradlew assembleRelease"
+    "android:release": "npm run build && cap sync android && cd android && ./gradlew assembleRelease",
+    "android:local": "./scripts/build-android.sh"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
