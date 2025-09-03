@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.aitradingbot.analyst',
-  appName: 'AI Trading Bot Analyst',
+  appId: 'com.tradology.app',
+  appName: 'tradology',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

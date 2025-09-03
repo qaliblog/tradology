@@ -74,6 +74,8 @@ jobs:
     - name: Install Android SDK components
       run: |
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        # Add build-tools to PATH for aapt
+        echo "$HOME/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
         
     - name: Install Capacitor CLI
       run: npm install -g @capacitor/cli
@@ -84,10 +86,30 @@ jobs:
     - name: Sync web code to native
       run: npx cap sync android
       
+    - name: Configure Android build
+      run: |
+        cd android
+        # Update app name in strings.xml
+        sed -i 's/AI Trading Bot Analyst/tradology/g' app/src/main/res/values/strings.xml
+        # Update package name in build.gradle if needed
+        sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/build.gradle
+        
+    - name: Create debug keystore
+      run: |
+        cd android
+        # Create debug keystore for signing
+        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        # Copy keystore to app directory
+        cp debug.keystore app/
+      
     - name: Build APK
       run: |
         cd android
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --info
+        # Verify APK was created
+        ls -la app/build/outputs/apk/debug/
+        # Check APK info
+        aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -10
       env:
         ANDROID_HOME: ${{ env.ANDROID_HOME }}
         ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
