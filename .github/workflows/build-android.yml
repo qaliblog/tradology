@@ -38,12 +38,6 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
         
-    - name: Setup Android SDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-        
     - name: Download and setup Android SDK
       run: |
         mkdir -p $HOME/android-sdk
@@ -94,6 +88,19 @@ jobs:
         # Update package name in build.gradle if needed
         sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/build.gradle
         
+        # Ensure AndroidManifest.xml has proper permissions and configuration
+        echo "Checking AndroidManifest.xml..."
+        cat app/src/main/AndroidManifest.xml
+        
+        # Update package name in AndroidManifest.xml if needed
+        sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/src/main/AndroidManifest.xml
+        
+        # Ensure proper permissions are set
+        if ! grep -q "android.permission.INTERNET" app/src/main/AndroidManifest.xml; then
+          echo "Adding INTERNET permission to AndroidManifest.xml"
+          sed -i '/<application/a\    <uses-permission android:name="android.permission.INTERNET" />' app/src/main/AndroidManifest.xml
+        fi
+        
     - name: Create debug keystore
       run: |
         cd android
@@ -101,18 +108,55 @@ jobs:
         keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         # Copy keystore to app directory
         cp debug.keystore app/
-      
-    - name: Build APK
+        
+    - name: Configure signing in build.gradle
       run: |
         cd android
-        ./gradlew assembleDebug --info
+        # Add signing config to app/build.gradle
+        cat >> app/build.gradle << 'EOF'
+        
+        android {
+            signingConfigs {
+                debug {
+                    storeFile file('debug.keystore')
+                    storePassword 'android'
+                    keyAlias 'androiddebugkey'
+                    keyPassword 'android'
+                }
+            }
+            buildTypes {
+                debug {
+                    signingConfig signingConfigs.debug
+                }
+            }
+        }
+        EOF
+        
+    - name: Build APK with debug info
+      run: |
+        cd android
+        # Clean previous builds
+        ./gradlew clean
+        # Build with verbose output
+        ./gradlew assembleDebug --info --stacktrace
         # Verify APK was created
         ls -la app/build/outputs/apk/debug/
-        # Check APK info
-        aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -10
-      env:
-        ANDROID_HOME: ${{ env.ANDROID_HOME }}
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        
+        # Check if build was successful
+        if [ ! -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "ERROR: APK was not created!"
+          exit 1
+        fi
+        
+    - name: Verify APK
+      run: |
+        cd android
+        # Check APK info and verify it's valid
+        aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -20
+        # Check APK file size
+        du -h app/build/outputs/apk/debug/app-debug.apk
+        # Verify APK is not corrupted
+        file app/build/outputs/apk/debug/app-debug.apk
         
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -124,7 +168,7 @@ jobs:
     - name: Build Release APK (unsigned)
       run: |
         cd android
-        ./gradlew assembleRelease
+        ./gradlew assembleRelease --info
       env:
         ANDROID_HOME: ${{ env.ANDROID_HOME }}
         ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
