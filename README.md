@@ -52,7 +52,7 @@ To build APKs locally:
 
 ### Prerequisites for Local Builds
 
-- Node.js 18+
+- Node.js 20+
 - Java 17+
 - Android SDK
 - Android Studio (recommended)

@@ -18,11 +18,16 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm install
+      
+    - name: Clean and regenerate lock file
+      run: |
+        rm -f package-lock.json
+        npm install --ignore-engines
       
     - name: Build web app
       run: npm run build
