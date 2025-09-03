@@ -1,15 +1,24 @@
 {
-  "name": "ai-trading-bot-analyst",
+  "name": "tradology",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:add": "cap add",
+    "cap:sync": "cap sync",
+    "cap:build": "cap build",
+    "cap:run": "cap run",
+    "android:build": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run build && cap sync android && cd android && ./gradlew assembleRelease",
+    "android:local": "./scripts/build-android.sh"
   },
   "dependencies": {
-    "@google/genai": "latest",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@google/genai": "^1.16.0",
     "@types/d3-scale": "^4.0.9",
     "@types/d3-time": "^3.0.4",
     "@types/d3-time-format": "^4.0.3",
@@ -22,6 +31,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
     "@types/node": "^22.14.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

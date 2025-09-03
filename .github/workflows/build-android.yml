@@ -1,0 +1,90 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Build web app
+      run: npm run build
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Install Capacitor CLI
+      run: npm install -g @capacitor/cli
+      
+    - name: Add Android platform
+      run: npx cap add android
+      
+    - name: Sync web code to native
+      run: npx cap sync android
+      
+    - name: Setup Android environment
+      run: |
+        # Use a pre-built Android environment
+        export ANDROID_HOME=/usr/local/android-sdk
+        export ANDROID_SDK_ROOT=/usr/local/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+        
+        # Update app name and package
+        cd android
+        sed -i 's/AI Trading Bot Analyst/tradology/g' app/src/main/res/values/strings.xml
+        sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/build.gradle
+        sed -i 's/com.aitradingbot.analyst/com.tradology.app/g' app/src/main/AndroidManifest.xml
+        
+        # Ensure proper permissions
+        if ! grep -q "android.permission.INTERNET" app/src/main/AndroidManifest.xml; then
+          sed -i '/<application/a\    <uses-permission android:name="android.permission.INTERNET" />' app/src/main/AndroidManifest.xml
+        fi
+        
+        # Show current configuration
+        echo "=== Current Configuration ==="
+        echo "Package: $(grep 'package=' app/src/main/AndroidManifest.xml)"
+        echo "App Name: $(grep 'string name="app_name"' app/src/main/res/values/strings.xml)"
+        echo "Build.gradle package: $(grep 'applicationId' app/build.gradle)"
+        
+    - name: Build APK
+      run: |
+        cd android
+        # Clean and build
+        ./gradlew clean
+        ./gradlew assembleDebug --stacktrace
+        
+        # Verify APK
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK build failed!"
+          exit 1
+        fi
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tradology-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
