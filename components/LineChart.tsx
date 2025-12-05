@@ -27,7 +27,7 @@ ChartJS.register(
   TimeScale
 );
 
-type Timeframe = 'Daily' | 'Weekly' | 'Monthly';
+export type Timeframe = 'Daily' | 'Weekly' | 'Monthly';
 
 // Helper to get the start of the week (Sunday) for a given date
 const getWeekStartDate = (date: Date) => {
@@ -81,7 +81,12 @@ const aggregateData = (data: ChartDataPoint[], timeframe: Timeframe): ChartDataP
 };
 
 
-const LineChart: React.FC<{ data: ChartDataPoint[] }> = ({ data }) => {
+interface LineChartProps {
+  data: ChartDataPoint[];
+  onTimeframeChange?: (timeframe: Timeframe) => void;
+}
+
+const LineChart: React.FC<LineChartProps> = ({ data, onTimeframeChange }) => {
   const [timeframe, setTimeframe] = useState<Timeframe>('Daily');
 
   const processedData = useMemo(() => {
@@ -164,7 +169,10 @@ const LineChart: React.FC<{ data: ChartDataPoint[] }> = ({ data }) => {
           {timeframes.map((tf) => (
             <button
               key={tf}
-              onClick={() => setTimeframe(tf)}
+              onClick={() => {
+                setTimeframe(tf);
+                onTimeframeChange?.(tf);
+              }}
               className={`px-3 py-1 text-sm font-medium rounded-md transition-colors duration-200 ${
                 timeframe === tf
                   ? 'bg-blue-600 text-white'

@@ -6,12 +6,13 @@ import DataTable from './components/DataTable';
 import AnalysisDisplay from './components/AnalysisDisplay';
 import LineChart from './components/LineChart';
 import { getTradingAnalysis } from './services/geminiService';
-import type { AnalysisResult } from './types';
+import type { AnalysisResult, Timeframe } from './types';
 
 const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('Daily');
 
   const handleAnalysisRequest = useCallback(async (prompt: string) => {
     if (!prompt.trim()) {
@@ -25,13 +26,15 @@ const App: React.FC = () => {
 
     try {
       // The service now returns a structured object with analysis and data
-      const result = await getTradingAnalysis(prompt);
+      const result = await getTradingAnalysis(prompt, selectedTimeframe);
       
       setAnalysisResult({
         analysis: result.analysis,
         chartData: result.chartData,
         prompt: prompt,
         sources: result.sources,
+        scenarios: result.scenarios,
+        timeframe: selectedTimeframe,
       });
 
     } catch (err) {
@@ -71,13 +74,27 @@ const App: React.FC = () => {
           {analysisResult && (
             <div className="mt-8 space-y-8">
               {analysisResult.chartData && analysisResult.chartData.length > 0 && (
-                <LineChart data={analysisResult.chartData} />
+                <LineChart 
+                  data={analysisResult.chartData} 
+                  onTimeframeChange={(tf) => {
+                    setSelectedTimeframe(tf);
+                    // Regenerate analysis with new timeframe
+                    if (analysisResult.prompt) {
+                      handleAnalysisRequest(analysisResult.prompt);
+                    }
+                  }}
+                />
               )}
               <DataTable 
                 data={analysisResult.chartData} 
                 prompt={analysisResult.prompt} 
               />
-              <AnalysisDisplay analysis={analysisResult.analysis} sources={analysisResult.sources} />
+              <AnalysisDisplay 
+                analysis={analysisResult.analysis} 
+                sources={analysisResult.sources}
+                scenarios={analysisResult.scenarios}
+                timeframe={analysisResult.timeframe}
+              />
             </div>
           )}
           
